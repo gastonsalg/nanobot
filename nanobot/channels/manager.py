@@ -73,6 +73,17 @@ class ChannelManager:
                 logger.info("Discord channel enabled")
             except ImportError as e:
                 logger.warning(f"Discord channel not available: {e}")
+
+        # Teams channel
+        if self.config.channels.teams.enabled:
+            try:
+                from nanobot.channels.teams import TeamsChannel
+                self.channels["teams"] = TeamsChannel(
+                    self.config.channels.teams, self.bus
+                )
+                logger.info("Teams channel enabled (feasibility stub)")
+            except ImportError as e:
+                logger.warning(f"Teams channel not available: {e}")
         
         # Feishu channel
         if self.config.channels.feishu.enabled:

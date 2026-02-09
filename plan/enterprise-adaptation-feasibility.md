@@ -26,11 +26,13 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 - [x] (2026-02-09 09:16Z) Ran full tests after security changes (`20 passed, 1 warning`).
 - [x] (2026-02-09) Implemented Milestone 3 runtime profile gate for `enterprise_minimal` in config + CLI startup paths.
 - [x] (2026-02-09) Added Milestone 3 test coverage for provider/channel policy rejection and CLI agent acceptance in enterprise profile mode.
+- [x] (2026-02-09) Implemented Milestone 4 Teams feasibility stub channel with inbound/outbound mapping and channel manager wiring.
+- [x] (2026-02-09) Added Teams spike tests and validated suite (`24 passed, 1 warning`).
 - [x] (2026-02-09 08:49Z) Establish a reproducible local baseline environment (dependencies, tests, smoke run).
 - [x] (2026-02-09 08:49Z) Complete Milestone 1 repository and risk inventory with explicit keep/remove candidates.
 - [x] (2026-02-09 09:16Z) Complete Milestone 2 security baseline gate (close critical/high risks before channel expansion).
 - [x] (2026-02-09) Complete Milestone 3 minimal profile spike (CLI-first, OpenAI/Codex-only, Teams optional).
-- [ ] Complete Milestone 4 Microsoft Teams channel feasibility spike.
+- [x] (2026-02-09) Complete Milestone 4 Microsoft Teams channel feasibility spike.
 - [ ] Complete Milestone 5 extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
 - [ ] Complete Milestone 6 upstream sync rehearsal and conflict-cost measurement.
 - [ ] Produce final feasibility recommendation and implementation roadmap.
@@ -63,6 +65,9 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 
 - Observation: Security baseline hardening reduced default tool/channel permissiveness and may change behavior for previously open local setups.
   Evidence: channel access now defaults to deny-unlisted and high-risk tools are blocked by default policy.
+
+- Observation: The repository currently ignores `tests/` in `.gitignore`, so new regression tests require explicit force-add when committing.
+  Evidence: `git add tests/test_teams_channel.py` was rejected until using `git add -f`.
 
 ## Decision Log
 
@@ -98,6 +103,10 @@ After this work, we will know whether this fork can be narrowed to an enterprise
   Rationale: This closes high-impact gaps immediately while keeping bounded configuration-based overrides for non-enterprise experimentation.
   Date/Author: 2026-02-09 / Codex
 
+- Decision: Implement Milestone 4 as a deterministic stub adapter (simulated Teams activities) instead of live Bot Framework or Graph integration.
+  Rationale: The feasibility objective is to prove routing and payload shape without external credentials or network dependencies; this keeps tests stable and merge risk low while preserving an additive path to real transport later.
+  Date/Author: 2026-02-09 / Codex
+
 ## Outcomes & Retrospective
 
 Milestone 1 outcome (2026-02-09): baseline environment is reproducible in `.venv`, tests pass after editable install, and the enterprise target contract is documented in `plan/enterprise-inventory.md` with explicit keep/disable/remove candidates.
@@ -105,6 +114,8 @@ Milestone 1 outcome (2026-02-09): baseline environment is reproducible in `.venv
 Security precondition outcome (2026-02-09): a dedicated risk register (`plan/security-risk-register.md`) now captures critical/high issues that must be remediated as Milestone 2 gate criteria before expanding channel or connector scope.
 
 Milestone 2 outcome (2026-02-09): security baseline gate implemented and validated. Critical/high findings in `plan/security-risk-register.md` are marked closed with code and test evidence, and policy defaults are documented in `plan/security-policy-matrix.md`.
+
+Milestone 4 outcome (2026-02-09): Teams feasibility spike implemented with additive configuration (`channels.teams`), stub channel wiring in `ChannelManager`, deterministic inbound activity parsing, and outbound payload formatting. Simulated payload tests now validate bus ingestion and outbound shape without requiring live Microsoft credentials.
 
 Remaining outcomes to summarize at later milestones:
 

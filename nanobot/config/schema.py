@@ -52,6 +52,17 @@ class DiscordConfig(BaseModel):
     gateway_url: str = "wss://gateway.discord.gg/?v=10&encoding=json"
     intents: int = 37377  # GUILDS + GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
 
+
+class TeamsConfig(BaseModel):
+    """Microsoft Teams channel configuration (feasibility stub)."""
+    enabled: bool = False
+    app_id: str = ""
+    app_password: str = ""
+    tenant_id: str = ""
+    allow_from: list[str] = Field(default_factory=list)  # Allowed Teams user IDs
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
+
+
 class EmailConfig(BaseModel):
     """Email channel configuration (IMAP inbound + SMTP outbound)."""
     enabled: bool = False
@@ -89,6 +100,7 @@ class ChannelsConfig(BaseModel):
     whatsapp: WhatsAppConfig = Field(default_factory=WhatsAppConfig)
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
     discord: DiscordConfig = Field(default_factory=DiscordConfig)
+    teams: TeamsConfig = Field(default_factory=TeamsConfig)
     feishu: FeishuConfig = Field(default_factory=FeishuConfig)
     dingtalk: DingTalkConfig = Field(default_factory=DingTalkConfig)
     email: EmailConfig = Field(default_factory=EmailConfig)

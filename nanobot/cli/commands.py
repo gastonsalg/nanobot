@@ -578,6 +578,13 @@ def channels_status():
         "✓" if dc.enabled else "✗",
         dc.gateway_url
     )
+
+    tm = config.channels.teams
+    table.add_row(
+        "Teams",
+        "✓" if tm.enabled else "✗",
+        "app configured" if tm.app_id else "[dim]not configured[/dim]"
+    )
     
     # Telegram
     tg = config.channels.telegram
