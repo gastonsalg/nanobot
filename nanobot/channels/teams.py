@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from typing import Any
 
 from loguru import logger
@@ -23,11 +24,13 @@ class TeamsChannel(BaseChannel):
     """
 
     name = "teams"
+    _MAX_SENT_PAYLOADS = 50
 
     def __init__(self, config: TeamsConfig, bus: MessageBus):
         super().__init__(config, bus)
         self.config: TeamsConfig = config
-        self.sent_payloads: list[dict[str, Any]] = []
+        # Keep a bounded buffer for test/debug visibility without unbounded growth.
+        self.sent_payloads: deque[dict[str, Any]] = deque(maxlen=self._MAX_SENT_PAYLOADS)
 
     async def start(self) -> None:
         """Start the Teams channel loop in stub mode."""

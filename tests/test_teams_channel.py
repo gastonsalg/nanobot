@@ -81,3 +81,17 @@ async def test_teams_send_records_formatted_payload() -> None:
 
     assert len(channel.sent_payloads) == 1
     assert channel.sent_payloads[0]["conversation"]["id"] == "conv-55"
+
+
+@pytest.mark.asyncio
+async def test_teams_send_payload_buffer_is_bounded() -> None:
+    channel = TeamsChannel(_config(), MessageBus())
+
+    for i in range(channel._MAX_SENT_PAYLOADS + 5):
+        await channel.send(
+            OutboundMessage(channel="teams", chat_id=f"conv-{i}", content=f"msg-{i}")
+        )
+
+    assert len(channel.sent_payloads) == channel._MAX_SENT_PAYLOADS
+    # Oldest entries should be dropped once maxlen is reached.
+    assert channel.sent_payloads[0]["conversation"]["id"] == "conv-5"
