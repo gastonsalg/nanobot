@@ -360,6 +360,8 @@ def gateway(
         cron_service=cron,
         restrict_to_workspace=config.tools.restrict_to_workspace,
         session_manager=session_manager,
+        blocked_tools=config.tools.blocked_tools,
+        allowed_tools=config.tools.allowed_tools,
     )
     
     # Set cron callback (needs agent)
@@ -462,6 +464,8 @@ def agent(
         brave_api_key=config.tools.web.search.api_key or None,
         exec_config=config.tools.exec,
         restrict_to_workspace=config.tools.restrict_to_workspace,
+        blocked_tools=config.tools.blocked_tools,
+        allowed_tools=config.tools.allowed_tools,
     )
     
     # Show spinner when logs are off (no output to miss); skip when logs are on
@@ -564,7 +568,7 @@ def channels_status():
     
     # Telegram
     tg = config.channels.telegram
-    tg_config = f"token: {tg.token[:10]}..." if tg.token else "[dim]not configured[/dim]"
+    tg_config = "token configured" if tg.token else "[dim]not configured[/dim]"
     table.add_row(
         "Telegram",
         "✓" if tg.enabled else "✗",
@@ -635,15 +639,25 @@ def _get_bridge_dir() -> Path:
 @channels_app.command("login")
 def channels_login():
     """Link device via QR code."""
+    import secrets
     import subprocess
+    from nanobot.config.loader import load_config, save_config
     
     bridge_dir = _get_bridge_dir()
+    config = load_config()
+
+    if not config.channels.whatsapp.bridge_token:
+        config.channels.whatsapp.bridge_token = secrets.token_urlsafe(24)
+        save_config(config)
+        console.print("[green]✓[/green] Generated WhatsApp bridge token in config.")
     
     console.print(f"{__logo__} Starting bridge...")
     console.print("Scan the QR code to connect.\n")
     
     try:
-        subprocess.run(["npm", "start"], cwd=bridge_dir, check=True)
+        env = os.environ.copy()
+        env["BRIDGE_TOKEN"] = config.channels.whatsapp.bridge_token
+        subprocess.run(["npm", "start"], cwd=bridge_dir, check=True, env=env)
     except subprocess.CalledProcessError as e:
         console.print(f"[red]Bridge failed: {e}[/red]")
     except FileNotFoundError:

@@ -8,8 +8,10 @@ from pydantic_settings import BaseSettings
 class WhatsAppConfig(BaseModel):
     """WhatsApp channel configuration."""
     enabled: bool = False
-    bridge_url: str = "ws://localhost:3001"
+    bridge_url: str = "ws://127.0.0.1:3001"
+    bridge_token: str = ""  # Shared secret required by bridge command channel
     allow_from: list[str] = Field(default_factory=list)  # Allowed phone numbers
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
 
 
 class TelegramConfig(BaseModel):
@@ -17,6 +19,7 @@ class TelegramConfig(BaseModel):
     enabled: bool = False
     token: str = ""  # Bot token from @BotFather
     allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs or usernames
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
     proxy: str | None = None  # HTTP/SOCKS5 proxy URL, e.g. "http://127.0.0.1:7890" or "socks5://127.0.0.1:1080"
 
 
@@ -28,6 +31,7 @@ class FeishuConfig(BaseModel):
     encrypt_key: str = ""  # Encrypt Key for event subscription (optional)
     verification_token: str = ""  # Verification Token for event subscription (optional)
     allow_from: list[str] = Field(default_factory=list)  # Allowed user open_ids
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
 
 
 class DingTalkConfig(BaseModel):
@@ -36,6 +40,7 @@ class DingTalkConfig(BaseModel):
     client_id: str = ""  # AppKey
     client_secret: str = ""  # AppSecret
     allow_from: list[str] = Field(default_factory=list)  # Allowed staff_ids
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
 
 
 class DiscordConfig(BaseModel):
@@ -43,6 +48,7 @@ class DiscordConfig(BaseModel):
     enabled: bool = False
     token: str = ""  # Bot token from Discord Developer Portal
     allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
     gateway_url: str = "wss://gateway.discord.gg/?v=10&encoding=json"
     intents: int = 37377  # GUILDS + GUILD_MESSAGES + DIRECT_MESSAGES + MESSAGE_CONTENT
 
@@ -75,6 +81,7 @@ class EmailConfig(BaseModel):
     max_body_chars: int = 12000
     subject_prefix: str = "Re: "
     allow_from: list[str] = Field(default_factory=list)  # Allowed sender email addresses
+    allow_unlisted_senders: bool = False  # If false, empty allow_from means deny all senders
 
 
 class ChannelsConfig(BaseModel):
@@ -149,7 +156,19 @@ class ToolsConfig(BaseModel):
     """Tools configuration."""
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
-    restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
+    restrict_to_workspace: bool = True  # Restrict tool access to workspace by default
+    blocked_tools: list[str] = Field(
+        default_factory=lambda: [
+            "exec",
+            "write_file",
+            "edit_file",
+            "web_search",
+            "web_fetch",
+            "spawn",
+            "cron",
+        ]
+    )
+    allowed_tools: list[str] = Field(default_factory=list)
 
 
 class Config(BaseSettings):

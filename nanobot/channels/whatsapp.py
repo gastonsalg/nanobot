@@ -33,6 +33,9 @@ class WhatsAppChannel(BaseChannel):
         import websockets
         
         bridge_url = self.config.bridge_url
+        if not self.config.bridge_token:
+            logger.error("WhatsApp bridge_token not configured")
+            return
         
         logger.info(f"Connecting to WhatsApp bridge at {bridge_url}...")
         
@@ -82,7 +85,8 @@ class WhatsAppChannel(BaseChannel):
             payload = {
                 "type": "send",
                 "to": msg.chat_id,
-                "text": msg.content
+                "text": msg.content,
+                "token": self.config.bridge_token,
             }
             await self._ws.send(json.dumps(payload))
         except Exception as e:

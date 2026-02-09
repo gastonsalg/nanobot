@@ -1,11 +1,13 @@
 """Web tools: web_search and web_fetch."""
 
 import html
+import ipaddress
 import json
 import os
 import re
+import socket
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -14,6 +16,14 @@ from nanobot.agent.tools.base import Tool
 # Shared constants
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_2) AppleWebKit/537.36"
 MAX_REDIRECTS = 5  # Limit redirects to prevent DoS attacks
+BLOCKED_HOSTNAMES = {
+    "localhost",
+    "localhost.localdomain",
+    "metadata.google.internal",
+}
+BLOCKED_IPS = {
+    "169.254.169.254",  # AWS/GCP/Azure metadata endpoint family
+}
 
 
 def _strip_tags(text: str) -> str:
@@ -30,17 +40,76 @@ def _normalize(text: str) -> str:
     return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
+def _is_public_ip(raw_ip: str) -> bool:
+    """Return True only for globally routable public IP addresses."""
+    try:
+        ip = ipaddress.ip_address(raw_ip)
+    except ValueError:
+        return False
+
+    if raw_ip in BLOCKED_IPS:
+        return False
+    return ip.is_global
+
+
+def _resolve_host_ips(hostname: str) -> set[str]:
+    """Resolve a hostname to a set of IP addresses."""
+    ips: set[str] = set()
+    infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+    for info in infos:
+        sockaddr = info[4]
+        if not sockaddr:
+            continue
+        ip = sockaddr[0]
+        if ip:
+            ips.add(ip)
+    return ips
+
+
 def _validate_url(url: str) -> tuple[bool, str]:
-    """Validate URL: must be http(s) with valid domain."""
+    """Validate URL and reject private/link-local/loopback targets (SSRF guard)."""
     try:
         p = urlparse(url)
         if p.scheme not in ('http', 'https'):
             return False, f"Only http/https allowed, got '{p.scheme or 'none'}'"
         if not p.netloc:
             return False, "Missing domain"
+
+        host = (p.hostname or "").strip().lower()
+        if not host:
+            return False, "Missing hostname"
+        if host in BLOCKED_HOSTNAMES:
+            return False, f"Blocked host '{host}'"
+
+        # Direct IP target
+        if _is_ip_literal(host):
+            if not _is_public_ip(host):
+                return False, f"Blocked non-public IP '{host}'"
+            return True, ""
+
+        # DNS target: all resolved addresses must be public.
+        try:
+            resolved_ips = _resolve_host_ips(host)
+        except Exception:
+            return False, f"Could not resolve hostname '{host}'"
+        if not resolved_ips:
+            return False, f"Could not resolve hostname '{host}'"
+        for ip in resolved_ips:
+            if not _is_public_ip(ip):
+                return False, f"Blocked hostname '{host}' resolving to non-public IP '{ip}'"
+
         return True, ""
     except Exception as e:
         return False, str(e)
+
+
+def _is_ip_literal(host: str) -> bool:
+    """Return whether host is a valid IPv4/IPv6 literal."""
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
 
 
 class WebSearchTool(Tool):
@@ -113,19 +182,35 @@ class WebFetchTool(Tool):
 
         max_chars = maxChars or self.max_chars
 
-        # Validate URL before fetching
-        is_valid, error_msg = _validate_url(url)
-        if not is_valid:
-            return json.dumps({"error": f"URL validation failed: {error_msg}", "url": url})
-
         try:
             async with httpx.AsyncClient(
-                follow_redirects=True,
-                max_redirects=MAX_REDIRECTS,
+                follow_redirects=False,
                 timeout=30.0
             ) as client:
-                r = await client.get(url, headers={"User-Agent": USER_AGENT})
-                r.raise_for_status()
+                current_url = url
+                redirect_count = 0
+                seen_urls: set[str] = set()
+
+                while True:
+                    is_valid, error_msg = _validate_url(current_url)
+                    if not is_valid:
+                        return json.dumps({"error": f"URL validation failed: {error_msg}", "url": current_url})
+                    if current_url in seen_urls:
+                        return json.dumps({"error": "Redirect loop detected", "url": current_url})
+                    seen_urls.add(current_url)
+
+                    r = await client.get(current_url, headers={"User-Agent": USER_AGENT})
+                    if r.is_redirect:
+                        location = r.headers.get("location")
+                        if not location:
+                            return json.dumps({"error": "Redirect missing Location header", "url": current_url})
+                        redirect_count += 1
+                        if redirect_count > MAX_REDIRECTS:
+                            return json.dumps({"error": "Too many redirects", "url": current_url})
+                        current_url = urljoin(str(r.url), location)
+                        continue
+                    r.raise_for_status()
+                    break
             
             ctype = r.headers.get("content-type", "")
             

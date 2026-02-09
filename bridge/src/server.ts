@@ -9,6 +9,7 @@ interface SendCommand {
   type: 'send';
   to: string;
   text: string;
+  token?: string;
 }
 
 interface BridgeMessage {
@@ -21,12 +22,17 @@ export class BridgeServer {
   private wa: WhatsAppClient | null = null;
   private clients: Set<WebSocket> = new Set();
 
-  constructor(private port: number, private authDir: string) {}
+  constructor(
+    private port: number,
+    private host: string,
+    private authDir: string,
+    private bridgeToken: string,
+  ) {}
 
   async start(): Promise<void> {
     // Create WebSocket server
-    this.wss = new WebSocketServer({ port: this.port });
-    console.log(`🌉 Bridge server listening on ws://localhost:${this.port}`);
+    this.wss = new WebSocketServer({ port: this.port, host: this.host });
+    console.log(`🌉 Bridge server listening on ws://${this.host}:${this.port}`);
 
     // Initialize WhatsApp client
     this.wa = new WhatsAppClient({
@@ -68,9 +74,19 @@ export class BridgeServer {
   }
 
   private async handleCommand(cmd: SendCommand): Promise<void> {
-    if (cmd.type === 'send' && this.wa) {
-      await this.wa.sendMessage(cmd.to, cmd.text);
+    if (cmd.type !== 'send') {
+      throw new Error('Unsupported command type');
     }
+    if (cmd.token !== this.bridgeToken) {
+      throw new Error('Unauthorized bridge command');
+    }
+    if (!this.wa) {
+      throw new Error('WhatsApp client not initialized');
+    }
+    if (!cmd.to || !cmd.text) {
+      throw new Error('Invalid send command payload');
+    }
+    await this.wa.sendMessage(cmd.to, cmd.text);
   }
 
   private broadcast(msg: BridgeMessage): void {

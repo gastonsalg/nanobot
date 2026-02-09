@@ -1,6 +1,7 @@
 """Configuration loading utilities."""
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -53,13 +54,18 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
     """
     path = config_path or get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    _secure_permissions(path.parent, mode=0o700)
     
     # Convert to camelCase format
     data = config.model_dump()
     data = convert_to_camel(data)
     
-    with open(path, "w") as f:
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp_path, "w") as f:
         json.dump(data, f, indent=2)
+    _secure_permissions(tmp_path, mode=0o600)
+    tmp_path.replace(path)
+    _secure_permissions(path, mode=0o600)
 
 
 def _migrate_config(data: dict) -> dict:
@@ -70,6 +76,17 @@ def _migrate_config(data: dict) -> dict:
     if "restrictToWorkspace" in exec_cfg and "restrictToWorkspace" not in tools:
         tools["restrictToWorkspace"] = exec_cfg.pop("restrictToWorkspace")
     return data
+
+
+def _secure_permissions(path: Path, mode: int) -> None:
+    """Best-effort restrictive permissions on POSIX systems."""
+    if os.name == "nt":
+        return
+    try:
+        os.chmod(path, mode)
+    except OSError:
+        # Keep behavior non-fatal for unsupported filesystems.
+        pass
 
 
 def convert_keys(data: Any) -> Any:

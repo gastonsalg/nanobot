@@ -69,10 +69,11 @@ class BaseChannel(ABC):
             True if allowed, False otherwise.
         """
         allow_list = getattr(self.config, "allow_from", [])
+        allow_unlisted = bool(getattr(self.config, "allow_unlisted_senders", False))
         
-        # If no allow list, allow everyone
+        # Secure default: if allow list is empty, deny unless explicitly allowed.
         if not allow_list:
-            return True
+            return allow_unlisted
         
         sender_str = str(sender_id)
         if sender_str in allow_list:
@@ -106,7 +107,7 @@ class BaseChannel(ABC):
         if not self.is_allowed(sender_id):
             logger.warning(
                 f"Access denied for sender {sender_id} on channel {self.name}. "
-                f"Add them to allowFrom list in config to grant access."
+                "Add them to allowFrom list in config to grant access."
             )
             return
         

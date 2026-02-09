@@ -1,6 +1,7 @@
 """Session management for conversation history."""
 
 import json
+import os
 from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -68,6 +69,11 @@ class SessionManager:
     def __init__(self, workspace: Path):
         self.workspace = workspace
         self.sessions_dir = ensure_dir(Path.home() / ".nanobot" / "sessions")
+        if os.name != "nt":
+            try:
+                os.chmod(self.sessions_dir, 0o700)
+            except OSError:
+                pass
         self._cache: dict[str, Session] = {}
     
     def _get_session_path(self, key: str) -> Path:
@@ -150,6 +156,11 @@ class SessionManager:
             # Write messages
             for msg in session.messages:
                 f.write(json.dumps(msg) + "\n")
+        if os.name != "nt":
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
         
         self._cache[session.key] = session
     

@@ -15,6 +15,7 @@ from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool, ListDirTool
 from nanobot.agent.tools.shell import ExecTool
 from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
+from nanobot.security.policy import ToolPolicy
 
 
 class SubagentManager:
@@ -35,6 +36,8 @@ class SubagentManager:
         brave_api_key: str | None = None,
         exec_config: "ExecToolConfig | None" = None,
         restrict_to_workspace: bool = False,
+        blocked_tools: list[str] | None = None,
+        allowed_tools: list[str] | None = None,
     ):
         from nanobot.config.schema import ExecToolConfig
         self.provider = provider
@@ -44,6 +47,10 @@ class SubagentManager:
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
         self.restrict_to_workspace = restrict_to_workspace
+        self.tool_policy = ToolPolicy(
+            blocked_tools=blocked_tools,
+            allowed_tools=allowed_tools,
+        )
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
     
     async def spawn(
@@ -99,16 +106,16 @@ class SubagentManager:
             # Build subagent tools (no message tool, no spawn tool)
             tools = ToolRegistry()
             allowed_dir = self.workspace if self.restrict_to_workspace else None
-            tools.register(ReadFileTool(allowed_dir=allowed_dir))
-            tools.register(WriteFileTool(allowed_dir=allowed_dir))
-            tools.register(ListDirTool(allowed_dir=allowed_dir))
-            tools.register(ExecTool(
+            self._register_if_allowed(tools, ReadFileTool(allowed_dir=allowed_dir))
+            self._register_if_allowed(tools, WriteFileTool(allowed_dir=allowed_dir))
+            self._register_if_allowed(tools, ListDirTool(allowed_dir=allowed_dir))
+            self._register_if_allowed(tools, ExecTool(
                 working_dir=str(self.workspace),
                 timeout=self.exec_config.timeout,
                 restrict_to_workspace=self.restrict_to_workspace,
             ))
-            tools.register(WebSearchTool(api_key=self.brave_api_key))
-            tools.register(WebFetchTool())
+            self._register_if_allowed(tools, WebSearchTool(api_key=self.brave_api_key))
+            self._register_if_allowed(tools, WebFetchTool())
             
             # Build messages with subagent-specific prompt
             system_prompt = self._build_subagent_prompt(task)
@@ -154,7 +161,10 @@ class SubagentManager:
                     for tool_call in response.tool_calls:
                         args_str = json.dumps(tool_call.arguments)
                         logger.debug(f"Subagent [{task_id}] executing: {tool_call.name} with arguments: {args_str}")
-                        result = await tools.execute(tool_call.name, tool_call.arguments)
+                        if not self.tool_policy.is_allowed(tool_call.name):
+                            result = f"Error: {self.tool_policy.rejection_reason(tool_call.name)}"
+                        else:
+                            result = await tools.execute(tool_call.name, tool_call.arguments)
                         messages.append({
                             "role": "tool",
                             "tool_call_id": tool_call.id,
@@ -238,6 +248,13 @@ You are a subagent spawned by the main agent to complete a specific task.
 Your workspace is at: {self.workspace}
 
 When you have completed the task, provide a clear summary of your findings or actions."""
+
+    def _register_if_allowed(self, tools: ToolRegistry, tool: Any) -> None:
+        """Register a subagent tool only if policy allows it."""
+        if self.tool_policy.is_allowed(tool.name):
+            tools.register(tool)
+            return
+        logger.info(f"Subagent tool disabled by policy: {tool.name}")
     
     def get_running_count(self) -> int:
         """Return the number of currently running subagents."""
