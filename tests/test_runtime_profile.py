@@ -26,6 +26,14 @@ def test_enterprise_minimal_rejects_non_openai_provider() -> None:
         validate_runtime_profile(config, mode="agent")
 
 
+def test_enterprise_minimal_rejects_non_openai_model_even_with_openai_provider() -> None:
+    config = _enterprise_config()
+    config.agents.defaults.model = "anthropic/claude-3-5-sonnet"
+
+    with pytest.raises(ProfileValidationError, match="requires explicit OpenAI model prefix"):
+        validate_runtime_profile(config, mode="agent")
+
+
 def test_enterprise_minimal_rejects_disallowed_gateway_channels() -> None:
     config = _enterprise_config()
     config.channels.telegram.enabled = True

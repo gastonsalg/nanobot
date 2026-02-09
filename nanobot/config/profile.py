@@ -14,6 +14,7 @@ class ProfileValidationError(ValueError):
 ENTERPRISE_MINIMAL = "enterprise_minimal"
 OPENAI_PROVIDER = "openai"
 ENTERPRISE_OPTIONAL_CHANNELS = {"teams"}
+OPENAI_MODEL_PREFIX = "openai/"
 
 
 @dataclass(frozen=True)
@@ -37,6 +38,12 @@ def validate_runtime_profile(config: Config, mode: str) -> ProfileValidationResu
         raise ProfileValidationError(
             "enterprise_minimal requires OpenAI provider routing; "
             f"detected provider '{detected}'."
+        )
+    model_name = (config.agents.defaults.model or "").strip().lower()
+    if not model_name.startswith(OPENAI_MODEL_PREFIX):
+        raise ProfileValidationError(
+            "enterprise_minimal requires explicit OpenAI model prefix "
+            f"('{OPENAI_MODEL_PREFIX}...'); got '{config.agents.defaults.model}'."
         )
 
     configured_allowed_channels = {
