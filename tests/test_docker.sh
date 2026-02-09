@@ -4,6 +4,14 @@ cd "$(dirname "$0")/.." || exit 1
 
 IMAGE_NAME="nanobot-test"
 
+cleanup() {
+    docker rm -f nanobot-test-run 2>/dev/null || true
+    docker rmi -f nanobot-test-onboarded 2>/dev/null || true
+    docker rmi -f "$IMAGE_NAME" 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
 echo "=== Building Docker image ==="
 docker build -t "$IMAGE_NAME" .
 
@@ -35,9 +43,9 @@ check "nanobot Status"
 check "Config:"
 check "Workspace:"
 check "Model:"
-check "OpenRouter API:"
-check "Anthropic API:"
-check "OpenAI API:"
+check "OpenRouter:"
+check "Anthropic:"
+check "OpenAI:"
 
 echo ""
 if $PASS; then
@@ -47,10 +55,14 @@ else
     exit 1
 fi
 
-# Cleanup
 echo ""
-echo "=== Cleanup ==="
-docker rm -f nanobot-test-run 2>/dev/null || true
-docker rmi -f nanobot-test-onboarded 2>/dev/null || true
-docker rmi -f "$IMAGE_NAME" 2>/dev/null || true
-echo "Done."
+echo "=== Running full pytest suite in Docker ==="
+docker run --rm \
+    --entrypoint /bin/sh \
+    -v "$(pwd)":/workspace \
+    -w /workspace \
+    "$IMAGE_NAME" \
+    -lc "uv pip install --system --no-cache -e '.[dev]' && pytest -q"
+
+echo ""
+echo "=== Done ==="

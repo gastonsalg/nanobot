@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # Install Node.js 20 for the WhatsApp bridge
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates gnupg git && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg git openssh-client && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
@@ -24,6 +24,12 @@ RUN mkdir -p nanobot bridge && touch nanobot/__init__.py && \
 COPY nanobot/ nanobot/
 COPY bridge/ bridge/
 RUN uv pip install --system --no-cache .
+
+# Some Node dependencies resolve transitive GitHub repos over SSH.
+# Rewrite SSH GitHub URLs to HTTPS so container builds don't require SSH auth.
+RUN git config --global url."https://github.com/".insteadOf "ssh://git@github.com/" && \
+    git config --global --add url."https://github.com/".insteadOf "git@github.com:" && \
+    git config --global --add url."https://github.com/".insteadOf "git+ssh://git@github.com/"
 
 # Build the WhatsApp bridge
 WORKDIR /app/bridge
