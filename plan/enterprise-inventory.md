@@ -10,7 +10,7 @@ This inventory now works alongside `plan/security-risk-register.md`, which recor
 
 ## Baseline Evidence (2026-02-09)
 
-All commands were run from `/Users/gaston.salgueiro/Code/nanobot`.
+All commands were run from the repository root (`<repo-root>`).
 
 Initial test run before environment setup:
 
@@ -33,8 +33,8 @@ CLI smoke checks:
 
 Observed result:
 
-    Config: /Users/gaston.salgueiro/.nanobot/config.json ✗
-    Workspace: /Users/gaston.salgueiro/.nanobot/workspace ✗
+    Config: ~/.nanobot/config.json ✗
+    Workspace: ~/.nanobot/workspace ✗
 
 Interpretation: runtime boots from editable install and test suite is reproducible in `.venv`, but first-run config bootstrap is still required for interactive local usage.
 

@@ -54,7 +54,7 @@ After this work, we will know whether this fork can be narrowed to an enterprise
   Evidence: `pytest -q` failed with `ModuleNotFoundError: No module named 'nanobot'` before `pip install -e ".[dev]"`, and passed after install.
 
 - Observation: CLI smoke usage depends on user bootstrap files under `~/.nanobot`.
-  Evidence: `nanobot status` reported missing `/Users/gaston.salgueiro/.nanobot/config.json` and workspace on this machine.
+  Evidence: `nanobot status` reported missing `~/.nanobot/config.json` and workspace on this machine.
 
 - Observation: Current baseline has critical/high risks that are material for enterprise deployment and must be treated as gating work.
   Evidence: `plan/security-risk-register.md` documents unauthenticated inbound access risk, weak filesystem boundary checks, SSRF exposure in web fetch, and unauthenticated bridge commands.
@@ -173,7 +173,7 @@ Acceptance: A short report captures merge conflict hotspots and a recommended br
 
 All commands below run from repository root:
 
-    cd /Users/gaston.salgueiro/Code/nanobot
+    cd <repo-root>
 
 1. Baseline environment and tests:
 

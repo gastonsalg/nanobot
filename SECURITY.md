@@ -2,9 +2,7 @@
 
 ## Scope
 
-This document applies to the enterprise downstream fork at:
-
-- `/Users/gaston.salgueiro/Code/nanobot`
+This document applies to this enterprise downstream fork repository (`<repo-root>`).
 
 It does not define policy for upstream `HKUDS/nanobot`.
 
@@ -37,8 +35,8 @@ This fork currently enforces:
 
 Reference documents:
 
-- `/Users/gaston.salgueiro/Code/nanobot/plan/security-risk-register.md`
-- `/Users/gaston.salgueiro/Code/nanobot/plan/security-policy-matrix.md`
+- `plan/security-risk-register.md`
+- `plan/security-policy-matrix.md`
 
 ## Operational Requirements
 

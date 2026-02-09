@@ -16,10 +16,10 @@ The maintenance model is:
 
 The adaptation work is tracked in:
 
-- `/Users/gaston.salgueiro/Code/nanobot/plan/enterprise-adaptation-feasibility.md`
-- `/Users/gaston.salgueiro/Code/nanobot/plan/enterprise-inventory.md`
-- `/Users/gaston.salgueiro/Code/nanobot/plan/security-risk-register.md`
-- `/Users/gaston.salgueiro/Code/nanobot/plan/security-policy-matrix.md`
+- `plan/enterprise-adaptation-feasibility.md`
+- `plan/enterprise-inventory.md`
+- `plan/security-risk-register.md`
+- `plan/security-policy-matrix.md`
 
 As of 2026-02-09:
 
@@ -41,7 +41,7 @@ The fork now ships with default-safe behavior:
 
 ## Quick Start (Local Development)
 
-From `/Users/gaston.salgueiro/Code/nanobot`:
+From the repository root:
 
 ```bash
 python3 -m venv .venv
