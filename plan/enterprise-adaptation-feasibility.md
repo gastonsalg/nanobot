@@ -24,10 +24,12 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 - [x] (2026-02-09 09:16Z) Implemented Milestone 2 security baseline controls across channel auth defaults, tool policy gating, filesystem boundary checks, SSRF validation, bridge auth, and secret file permissions.
 - [x] (2026-02-09 09:16Z) Added Milestone 2 artifacts: `plan/security-policy-matrix.md` and updated `plan/security-risk-register.md` with closure status.
 - [x] (2026-02-09 09:16Z) Ran full tests after security changes (`20 passed, 1 warning`).
+- [x] (2026-02-09) Implemented Milestone 3 runtime profile gate for `enterprise_minimal` in config + CLI startup paths.
+- [x] (2026-02-09) Added Milestone 3 test coverage for provider/channel policy rejection and CLI agent acceptance in enterprise profile mode.
 - [x] (2026-02-09 08:49Z) Establish a reproducible local baseline environment (dependencies, tests, smoke run).
 - [x] (2026-02-09 08:49Z) Complete Milestone 1 repository and risk inventory with explicit keep/remove candidates.
 - [x] (2026-02-09 09:16Z) Complete Milestone 2 security baseline gate (close critical/high risks before channel expansion).
-- [ ] Complete Milestone 3 minimal profile spike (CLI-first, OpenAI/Codex-only, Teams optional).
+- [x] (2026-02-09) Complete Milestone 3 minimal profile spike (CLI-first, OpenAI/Codex-only, Teams optional).
 - [ ] Complete Milestone 4 Microsoft Teams channel feasibility spike.
 - [ ] Complete Milestone 5 extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
 - [ ] Complete Milestone 6 upstream sync rehearsal and conflict-cost measurement.

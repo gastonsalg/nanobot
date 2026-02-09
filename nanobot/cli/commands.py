@@ -313,6 +313,17 @@ def _make_provider(config):
     )
 
 
+def _enforce_runtime_profile(config, mode: str) -> None:
+    """Validate runtime profile constraints for the current command mode."""
+    from nanobot.config.profile import ProfileValidationError, validate_runtime_profile
+
+    try:
+        validate_runtime_profile(config, mode=mode)
+    except ProfileValidationError as e:
+        console.print(f"[red]Profile policy error:[/red] {e}")
+        raise typer.Exit(1)
+
+
 # ============================================================================
 # Gateway / Server
 # ============================================================================
@@ -340,6 +351,7 @@ def gateway(
     console.print(f"{__logo__} Starting nanobot gateway on port {port}...")
     
     config = load_config()
+    _enforce_runtime_profile(config, mode="gateway")
     bus = MessageBus()
     provider = _make_provider(config)
     session_manager = SessionManager(config.workspace_path)
@@ -448,6 +460,7 @@ def agent(
     from loguru import logger
     
     config = load_config()
+    _enforce_runtime_profile(config, mode="agent")
     
     bus = MessageBus()
     provider = _make_provider(config)

@@ -173,6 +173,8 @@ class ToolsConfig(BaseModel):
 
 class Config(BaseSettings):
     """Root configuration for nanobot."""
+    runtime_profile: str = "default"
+    enterprise_allowed_channels: list[str] = Field(default_factory=list)
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
