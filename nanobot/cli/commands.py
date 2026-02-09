@@ -215,10 +215,11 @@ def onboard():
     
     console.print(f"\n{__logo__} nanobot is ready!")
     console.print("\nNext steps:")
-    console.print("  1. Add your API key to [cyan]~/.nanobot/config.json[/cyan]")
-    console.print("     Get one at: https://openrouter.ai/keys")
-    console.print("  2. Chat: [cyan]nanobot agent -m \"Hello!\"[/cyan]")
-    console.print("\n[dim]Want Telegram/WhatsApp? See: https://github.com/HKUDS/nanobot#-chat-apps[/dim]")
+    console.print("  1. Configure provider credentials in [cyan]~/.nanobot/config.json[/cyan]")
+    console.print("     Enterprise profile: set [cyan]providers.openai.apiKey[/cyan] and [cyan]agents.defaults.model[/cyan] to [cyan]openai/...[/cyan]")
+    console.print("  2. Optional: enable [cyan]runtimeProfile[/cyan] = [cyan]enterprise_minimal[/cyan]")
+    console.print("  3. Chat: [cyan]nanobot agent -m \"Hello!\"[/cyan]")
+    console.print("\n[dim]See README.md for fork-specific setup and policy defaults.[/dim]")
 
 
 
