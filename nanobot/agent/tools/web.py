@@ -7,7 +7,7 @@ import os
 import re
 import socket
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -182,19 +182,35 @@ class WebFetchTool(Tool):
 
         max_chars = maxChars or self.max_chars
 
-        # Validate URL before fetching
-        is_valid, error_msg = _validate_url(url)
-        if not is_valid:
-            return json.dumps({"error": f"URL validation failed: {error_msg}", "url": url})
-
         try:
             async with httpx.AsyncClient(
-                follow_redirects=True,
-                max_redirects=MAX_REDIRECTS,
+                follow_redirects=False,
                 timeout=30.0
             ) as client:
-                r = await client.get(url, headers={"User-Agent": USER_AGENT})
-                r.raise_for_status()
+                current_url = url
+                redirect_count = 0
+                seen_urls: set[str] = set()
+
+                while True:
+                    is_valid, error_msg = _validate_url(current_url)
+                    if not is_valid:
+                        return json.dumps({"error": f"URL validation failed: {error_msg}", "url": current_url})
+                    if current_url in seen_urls:
+                        return json.dumps({"error": "Redirect loop detected", "url": current_url})
+                    seen_urls.add(current_url)
+
+                    r = await client.get(current_url, headers={"User-Agent": USER_AGENT})
+                    if r.is_redirect:
+                        location = r.headers.get("location")
+                        if not location:
+                            return json.dumps({"error": "Redirect missing Location header", "url": current_url})
+                        redirect_count += 1
+                        if redirect_count > MAX_REDIRECTS:
+                            return json.dumps({"error": "Too many redirects", "url": current_url})
+                        current_url = urljoin(str(r.url), location)
+                        continue
+                    r.raise_for_status()
+                    break
             
             ctype = r.headers.get("content-type", "")
             
