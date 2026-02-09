@@ -20,6 +20,7 @@ The adaptation work is tracked in:
 - `plan/enterprise-inventory.md`
 - `plan/security-risk-register.md`
 - `plan/security-policy-matrix.md`
+- `FORK-DIFFERENCES.md` (upstream vs fork divergence register)
 
 As of 2026-02-09:
 

@@ -143,6 +143,8 @@ To keep merge cost bounded, Milestone 1 recommends policy-first constraints over
 - Prefer additive profile checks in config and startup paths.
 - Keep existing provider/channel/tool code paths present but unreachable in `enterprise_minimal` by policy.
 - Delay physical module removal until Milestone 6 conflict rehearsal quantifies maintenance cost.
+- Record each intentional divergence in `FORK-DIFFERENCES.md` in the same PR that introduces it.
+- During upstream sync PRs, treat `FORK-DIFFERENCES.md` as a required audit checklist and update statuses.
 
 This preserves optional rollback and reduces risk of broad conflicts when pulling upstream changes.
 

@@ -129,6 +129,8 @@ This repository is a Python assistant framework (`nanobot/`) with optional multi
 
 For enterprise adaptation, the key question is not only "can we remove features," but "can we remove or disable them in a way that still allows regular upstream pulls." In this plan, "upstream compatibility" means this fork can repeatedly merge changes from upstream (`HKUDS/nanobot`) into this repository with predictable, bounded conflicts; it does not imply pushing enterprise-specific fork changes upstream. "Profile" means a named runtime mode that enables a constrained subset of functionality (for example `enterprise_minimal`) without deleting upstream code prematurely.
 
+Fork divergence tracking policy: all intentional fork-vs-upstream behavior differences must be recorded in `FORK-DIFFERENCES.md` at introduction time, and the file must be reviewed/updated in every upstream sync PR.
+
 ## Plan of Work
 
 ### Milestone 1: Baseline Inventory and Target Contract
