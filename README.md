@@ -27,7 +27,7 @@ As of 2026-02-11:
 - Milestone 1 (inventory/contract) is complete.
 - Milestone 2 (security baseline gate) is complete.
 - Milestone 7 (restricted execution architecture hardening) is complete.
-- Remaining work includes connector interfaces and final feasibility recommendation.
+- Next milestone is a minimum showable product in Teams: live chat plus calendar scheduling assistance (availability + confirmation-based booking).
 
 ## Security Baseline Defaults
 

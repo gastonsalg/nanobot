@@ -6,7 +6,7 @@ This plan defines a research and experimentation track to determine whether this
 
 ## Purpose / Big Picture
 
-After this work, we will know whether this fork can be narrowed to an enterprise-safe core that uses only ChatGPT/Codex as its AI backend, removes consumer messaging channels, and provides clean extension points for future Microsoft 365/SharePoint, Jira, Confluence, and Miro integrations. This plan now also evaluates Microsoft Teams as the first enterprise chat surface so we can verify whether users can chat with the assistant in Teams in addition to CLI. The visible outcome is a documented feasibility decision backed by runnable experiments, not assumptions. We will be able to run a minimal assistant profile locally, verify that unsafe or unnecessary features are disabled, test a Teams channel spike, and measure how difficult it is to keep syncing upstream.
+After this work, we will know whether this fork can be narrowed to an enterprise-safe core that uses only ChatGPT/Codex as its AI backend, removes consumer messaging channels, and provides clean extension points for future Microsoft 365/SharePoint, Jira, Confluence, and Miro integrations. This plan now evaluates Microsoft Teams as the first enterprise chat surface so users can chat with the assistant in Teams in addition to CLI, and defines a minimum showable product centered on Teams chat plus calendar scheduling assistance. The visible outcome is a documented feasibility decision backed by runnable experiments, not assumptions. We will be able to run a minimal assistant profile locally, verify that unsafe or unnecessary features are disabled, demonstrate Teams chat, demonstrate calendar slot suggestion and confirmation-based booking flow, and measure how difficult it is to keep syncing upstream.
 
 ## Progress
 
@@ -37,7 +37,9 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 - [x] (2026-02-11 08:00Z) Fetched `upstream/main` and confirmed 28 new commits are pending for downstream sync review before further implementation.
 - [x] (2026-02-11) Implemented Milestone 7 restricted execution architecture in `ExecTool` for workspace-restricted mode (argv execution, explicit allowlist, no shell grammar) with updated regression coverage.
 - [x] (2026-02-11) Implemented TinyClaw borrow candidate #1 as an optional Codex CLI-backed OpenAI route (`providers.openai.useCodexCli`) for seat-auth environments without OpenAI API credits.
-- [ ] Complete Milestone 5 extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
+- [ ] Complete Milestone 5A live Teams chat path (tenant-connected MVP, additive with CLI).
+- [ ] Complete Milestone 5B calendar assistant path (availability first, confirmation-based booking second).
+- [ ] Complete Milestone 5C extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
 - [ ] Complete Milestone 6 upstream sync rehearsal and conflict-cost measurement.
 - [x] (2026-02-11) Define and execute a post-sync architectural hardening plan for restricted command execution (replace shell-string guarding with structured execution controls).
 - [ ] Produce final feasibility recommendation and implementation roadmap.
@@ -136,7 +138,7 @@ After this work, we will know whether this fork can be narrowed to an enterprise
   Date/Author: 2026-02-11 / Codex
 
 - Decision: Execute an upstream sync checkpoint before starting Milestone 5 implementation work.
-  Rationale: Upstream now has 28 new commits touching core runtime, security, docs, and plan artifacts; syncing first reduces duplicate work and rebase churn during connector-interface implementation.
+  Rationale: Upstream now has 28 new commits touching core runtime, security, docs, and plan artifacts; syncing first reduces duplicate work and rebase churn during post-MSP connector-interface implementation.
   Date/Author: 2026-02-11 / Codex
 
 - Decision: Treat current `ExecTool` shell guard patches as interim controls and schedule an architectural replacement for restricted execution mode.
@@ -149,6 +151,10 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 
 - Decision: Implement Codex CLI support as an optional OpenAI-route authentication mode (`providers.openai.useCodexCli`) instead of introducing a new provider family.
   Rationale: This preserves enterprise profile semantics ("OpenAI route only") while allowing seat-auth execution in environments without API credits.
+  Date/Author: 2026-02-11 / Codex
+
+- Decision: Prioritize a minimum showable product in Milestone 5 around Teams chat plus calendar scheduling over broader connector interface work.
+  Rationale: Demonstrable user value and stakeholder alignment (product + InfoSec) are higher with a concrete Teams/calendar workflow than with abstract connector stubs.
   Date/Author: 2026-02-11 / Codex
 
 ## Outcomes & Retrospective
@@ -172,6 +178,8 @@ Current checkpoint outcome (2026-02-11): TinyClaw assessment completed. The fork
 Milestone 7 outcome (2026-02-11): restricted command execution no longer relies on shell-string guarding in workspace-restricted mode. The runtime now parses commands into argv, rejects shell operators/expansions/environment assignments, enforces an explicit command allowlist (with subcommand scoping support), and validates both execution `cwd` and path arguments against workspace boundaries. Regression tests in `tests/test_shell_guard.py` cover known bypass classes.
 
 Codex CLI provider outcome (2026-02-11): OpenAI model routing now supports an optional local Codex CLI-backed path (`providers.openai.useCodexCli=true`) so users with Codex seat authentication can run the assistant without storing OpenAI API keys in app config. The implementation avoids global conversation resume and uses full transcript prompts per call to preserve session isolation expectations.
+
+Next checkpoint target: Milestone 5 minimum showable product with two visible capabilities in Teams: (1) direct chat interaction and (2) calendar scheduling assistance that first proposes shared free slots and only books after explicit user confirmation.
 
 ## Context and Orientation
 
@@ -228,15 +236,38 @@ Expected outcome: an initial `teams` channel module (or prototype module in an e
 
 Acceptance: from a simulated Teams inbound payload, the bus receives an `InboundMessage`, the agent produces a response, and the Teams adapter formats an outbound reply payload correctly.
 
-### Milestone 5: Extension Interface Spike (No External API Dependency Yet)
+### Milestone 5: Minimum Showable Product (Teams + Calendar)
 
-Define adapter interfaces and stub implementations for future integrations: Microsoft 365/SharePoint, Jira, Confluence, and Miro. Stubs should be testable without network calls and without credentials. The purpose is to prove architecture shape and call flows, not to complete real integrations.
+Milestone 5 is split into three phases so we can demo user-visible value early while keeping architecture risk bounded.
 
-Execution sequencing note: before writing Milestone 5 code, perform the upstream sync checkpoint from Milestone 6 steps (fetch, merge rehearsal, conflict map) against latest `upstream/main`, then continue with Milestone 5 on top of the synced baseline.
+#### Milestone 5A: Live Teams Chat MVP
+
+Implement a tenant-connected Teams chat path (additive with CLI) so users can message goodbot directly from Teams. Preserve existing policy/profile guards from earlier milestones.
+
+Expected outcome: a live Teams chat demo in a dev tenant where inbound user messages route through the bus and outbound assistant replies return to the same chat/thread.
+
+Acceptance: approved tenant user can send a Teams message and receive a goodbot reply with request/response logs for auditability.
+
+#### Milestone 5B: Calendar Assistant MVP (Availability + Booking)
+
+Implement Microsoft calendar integration in two steps:
+
+1. Availability mode: given attendees and duration, propose ranked shared slots.
+2. Booking mode: create meeting only after explicit confirmation of a selected slot.
+
+Start with read-first permissions and add write permissions only when booking is enabled.
+
+Expected outcome: Teams conversation flow where user asks for a meeting, receives candidate slots, confirms one slot, then receives booking confirmation.
+
+Acceptance: demo transcript shows explicit confirmation gate before event creation; no booking occurs without confirmation.
+
+#### Milestone 5C: Extension Interface Spike (No External API Dependency Yet)
+
+Define adapter interfaces and stub implementations for future integrations: Microsoft 365/SharePoint, Jira, Confluence, and Miro. Stubs should be testable without network calls and without credentials.
 
 Expected outcome: a new module namespace for enterprise connectors and tests that prove the agent can invoke connector abstractions safely.
 
-Acceptance: A simple local test can call a stub connector through a registered tool and return deterministic output.
+Acceptance: a simple local test can call a stub connector through a registered tool and return deterministic output.
 
 ### Milestone 6: Upstream Sync Rehearsal
 
@@ -467,3 +498,4 @@ Plan revision note (2026-02-09): Added security risk register and re-sequenced m
 Plan revision note (2026-02-09): Completed Milestone 2 security baseline implementation with tests, added policy matrix, and updated risk register to closed status for initial critical/high findings.
 Plan revision note (2026-02-11): Added TinyClaw research findings and borrow candidates, recorded decision to keep this fork as baseline, and prioritized an upstream sync checkpoint (28 pending commits) before new Milestone 5 implementation work.
 Plan revision note (2026-02-11): Added Milestone 7 and decision-log guidance for architectural restricted-execution hardening; current shell-guard regex/token patches are tracked as interim controls only.
+Plan revision note (2026-02-11): Re-scoped Milestone 5 to a minimum showable product track: 5A live Teams chat, 5B calendar availability + confirmation-based booking, then 5C connector interfaces.
