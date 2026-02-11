@@ -634,6 +634,8 @@ class MochatChannel(BaseChannel):
         if not isinstance(payload, dict):
             return
         target_id = _str_field(payload, "sessionId")
+        if target_kind == "panel":
+            target_id = target_id or _str_field(payload, "panelId", "converseId")
         if not target_id:
             return
 
