@@ -36,6 +36,7 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 - [x] (2026-02-11 08:00Z) Researched a local `tinyclaw` clone as an alternative baseline and recorded implementation ideas suitable for this fork.
 - [x] (2026-02-11 08:00Z) Fetched `upstream/main` and confirmed 28 new commits are pending for downstream sync review before further implementation.
 - [x] (2026-02-11) Implemented Milestone 7 restricted execution architecture in `ExecTool` for workspace-restricted mode (argv execution, explicit allowlist, no shell grammar) with updated regression coverage.
+- [x] (2026-02-11) Implemented TinyClaw borrow candidate #1 as an optional Codex CLI-backed OpenAI route (`providers.openai.useCodexCli`) for seat-auth environments without OpenAI API credits.
 - [ ] Complete Milestone 5 extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
 - [ ] Complete Milestone 6 upstream sync rehearsal and conflict-cost measurement.
 - [x] (2026-02-11) Define and execute a post-sync architectural hardening plan for restricted command execution (replace shell-string guarding with structured execution controls).
@@ -84,6 +85,9 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 
 - Observation: Restricted exec mode now enforces argv-only execution and rejects shell grammar by design, which is materially safer but intentionally less flexible than shell parsing.
   Evidence: `nanobot/agent/tools/shell.py` now uses `create_subprocess_exec` under `restrict_to_workspace`, blocks shell operators/expansions/assignments, and applies explicit command allowlisting.
+
+- Observation: Codex CLI provider integration is currently text-response only (no runtime tool-call protocol), but it keeps per-session isolation by using full message history instead of global `resume --last`.
+  Evidence: `nanobot/providers/codex_cli_provider.py` renders full transcript into each `codex exec` prompt and does not request resume-based session reuse.
 
 ## Decision Log
 
@@ -143,6 +147,10 @@ After this work, we will know whether this fork can be narrowed to an enterprise
   Rationale: This removes shell interpretation from the restricted path and makes policy enforcement deterministic across known bypass classes.
   Date/Author: 2026-02-11 / Codex
 
+- Decision: Implement Codex CLI support as an optional OpenAI-route authentication mode (`providers.openai.useCodexCli`) instead of introducing a new provider family.
+  Rationale: This preserves enterprise profile semantics ("OpenAI route only") while allowing seat-auth execution in environments without API credits.
+  Date/Author: 2026-02-11 / Codex
+
 ## Outcomes & Retrospective
 
 Milestone 1 outcome (2026-02-09): baseline environment is reproducible in `.venv`, tests pass after editable install, and the enterprise target contract is documented in `plan/enterprise-inventory.md` with explicit keep/disable/remove candidates.
@@ -163,6 +171,8 @@ Current checkpoint outcome (2026-02-11): TinyClaw assessment completed. The fork
 
 Milestone 7 outcome (2026-02-11): restricted command execution no longer relies on shell-string guarding in workspace-restricted mode. The runtime now parses commands into argv, rejects shell operators/expansions/environment assignments, enforces an explicit command allowlist (with subcommand scoping support), and validates both execution `cwd` and path arguments against workspace boundaries. Regression tests in `tests/test_shell_guard.py` cover known bypass classes.
 
+Codex CLI provider outcome (2026-02-11): OpenAI model routing now supports an optional local Codex CLI-backed path (`providers.openai.useCodexCli=true`) so users with Codex seat authentication can run the assistant without storing OpenAI API keys in app config. The implementation avoids global conversation resume and uses full transcript prompts per call to preserve session isolation expectations.
+
 ## Context and Orientation
 
 This repository is a Python assistant framework (`nanobot/`) with optional multi-channel integrations and a Node.js WhatsApp bridge (`bridge/`). The command-line entrypoint and runtime wiring live in `nanobot/cli/commands.py`. The agent orchestration loop, tool execution, and context construction are in `nanobot/agent/`. LLM provider selection and routing are in `nanobot/config/schema.py` and `nanobot/providers/`. Channel adapters are in `nanobot/channels/`. Scheduled behavior is handled by `nanobot/cron/` and `nanobot/heartbeat/`.
@@ -176,6 +186,8 @@ Fork divergence tracking policy: all intentional fork-vs-upstream behavior diffe
 TinyClaw was reviewed as a parallel simplification experiment (local tinyclaw clone). We will borrow ideas, not architecture. The first borrow candidate is an optional provider adapter that invokes an authenticated CLI runtime (Codex) for model execution, so enterprise users with seat access but no API credits can still use the assistant under controlled conditions. The second candidate is operational hardening around serialized message processing: keep deterministic single-message execution guarantees in core runtime and add explicit tests/guards so behavior does not depend on timer cadence.
 
 We will not import TinyClaw's global conversation reuse model (`resume --last`) directly because it can blur isolation between users/channels. Any CLI-backed provider in this fork must preserve existing session keying semantics and enterprise authorization rules.
+
+Status update (2026-02-11): borrow candidate #1 (optional Codex CLI-backed provider path) is implemented; borrow candidate #2 (explicit serialized processing guarantees) remains a future follow-up.
 
 ## Plan of Work
 

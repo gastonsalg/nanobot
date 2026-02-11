@@ -181,7 +181,8 @@ def onboard():
     console.print(f"\n{__logo__} goodbot is ready!")
     console.print("\nNext steps:")
     console.print("  1. Configure provider credentials in [cyan]~/.nanobot/config.json[/cyan]")
-    console.print("     Enterprise profile: set [cyan]providers.openai.apiKey[/cyan] and [cyan]agents.defaults.model[/cyan] to [cyan]openai/...[/cyan]")
+    console.print("     Enterprise profile: set [cyan]agents.defaults.model[/cyan] to [cyan]openai/...[/cyan] and either [cyan]providers.openai.apiKey[/cyan] or [cyan]providers.openai.useCodexCli=true[/cyan]")
+    console.print("     If using Codex CLI mode, authenticate once with [cyan]codex login[/cyan]")
     console.print("  2. Optional: enable [cyan]runtimeProfile[/cyan] = [cyan]enterprise_minimal[/cyan]")
     console.print("  3. Chat: [cyan]goodbot agent -m \"Hello!\"[/cyan]")
     console.print("\n[dim]See README.md for fork-specific setup and policy defaults.[/dim]")
@@ -205,7 +206,7 @@ You are a helpful AI assistant. Be concise, accurate, and friendly.
 """,
         "SOUL.md": """# Soul
 
-I am goodbot, a lightweight AI assistant.
+I am goodbot, a lightweight enterprise assistant.
 
 ## Personality
 
@@ -218,6 +219,13 @@ I am goodbot, a lightweight AI assistant.
 - Accuracy over speed
 - User privacy and safety
 - Transparency in actions
+
+## Scope
+
+- I am a general enterprise assistant.
+- I do not proactively offer software engineering, coding, or GitHub workflow help.
+- If asked for coding support, I suggest using Codex and continue with non-coding assistance.
+- I prioritize planning, communication, documentation, research summaries, and coordination.
 """,
         "USER.md": """# User
 
@@ -267,19 +275,31 @@ This file stores important information that should persist across sessions.
 
 def _make_provider(config):
     """Create LiteLLMProvider from config. Exits if no API key found."""
+    from nanobot.providers.codex_cli_provider import CodexCLIProvider
     from nanobot.providers.litellm_provider import LiteLLMProvider
-    p = config.get_provider()
     model = config.agents.defaults.model
+
+    # OpenAI model route can optionally use local Codex CLI auth instead of API keys.
+    if model.lower().startswith("openai/") and config.providers.openai.use_codex_cli:
+        return CodexCLIProvider(
+            default_model=model,
+            working_dir=str(config.workspace_path),
+        )
+
+    p = config.get_provider(model)
     if not (p and p.api_key) and not model.startswith("bedrock/"):
         console.print("[red]Error: No API key configured.[/red]")
-        console.print("Set one in ~/.nanobot/config.json under providers section")
+        console.print(
+            "Set one in ~/.nanobot/config.json under providers section, "
+            "or enable providers.openai.useCodexCli for openai/* models."
+        )
         raise typer.Exit(1)
     return LiteLLMProvider(
         api_key=p.api_key if p else None,
-        api_base=config.get_api_base(),
+        api_base=config.get_api_base(model),
         default_model=model,
         extra_headers=p.extra_headers if p else None,
-        provider_name=config.get_provider_name(),
+        provider_name=config.get_provider_name(model),
     )
 
 
@@ -870,6 +890,12 @@ def status():
                 else:
                     console.print(f"{spec.label}: [dim]not set[/dim]")
             else:
+                if spec.name == "openai" and p.use_codex_cli:
+                    if p.api_key:
+                        console.print(f"{spec.label}: [green]✓[/green] [dim](api key + codex cli)[/dim]")
+                    else:
+                        console.print(f"{spec.label}: [green]✓ codex-cli[/green]")
+                    continue
                 has_key = bool(p.api_key)
                 console.print(f"{spec.label}: {'[green]✓[/green]' if has_key else '[dim]not set[/dim]'}")
 

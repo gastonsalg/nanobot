@@ -64,6 +64,12 @@ Run direct CLI mode:
 goodbot agent -m "hello"
 ```
 
+Optional OpenAI-without-API-key path (Codex CLI seat auth):
+
+```bash
+codex login
+```
+
 ## Configuration Notes
 
 Config lives at `~/.nanobot/config.json` (path intentionally kept for compatibility during fork evolution).
@@ -75,6 +81,8 @@ Important defaults in this fork:
 - `tools.exec.allowedCommands` defines the explicit restricted exec allowlist (supports `command:subcommand` entries).
 - Channel configs include `allowUnlistedSenders` (default `false`).
 - WhatsApp channel includes `bridgeToken` for bridge command authentication.
+- OpenAI route can use local Codex CLI auth by setting `providers.openai.useCodexCli=true` with an `openai/...` model (no OpenAI API key required in config).
+- Codex CLI mode currently returns text responses only (no tool-call protocol).
 
 ## Upstream Sync Practice
 

@@ -76,6 +76,12 @@ When `tools.restrict_to_workspace=true` and `exec` is enabled by policy:
 - Config file permissions are enforced to `0600` (best effort on POSIX).
 - Session file permissions are enforced to `0600` and sessions directory to `0700` (best effort on POSIX).
 
+## OpenAI Route Authentication Modes
+
+- Default mode: OpenAI API key via `providers.openai.api_key`.
+- Optional mode: local Codex CLI via `providers.openai.use_codex_cli=true` (no OpenAI API key stored in app config).
+- Codex CLI mode executes `codex exec` in read-only sandbox mode and returns text responses only (no tool-call protocol).
+
 ## Remaining Decisions
 
 - Whether `message` tool should be blocked by default in enterprise profile.

@@ -192,6 +192,7 @@ class ProviderConfig(BaseModel):
     api_key: str = ""
     api_base: str | None = None
     extra_headers: dict[str, str] | None = None  # Custom headers (e.g. APP-Code for AiHubMix)
+    use_codex_cli: bool = False  # OpenAI-only option: run through local codex CLI auth
 
 
 class ProvidersConfig(BaseModel):
@@ -298,6 +299,12 @@ class Config(BaseSettings):
         """Match provider config and its registry name. Returns (config, spec_name)."""
         from nanobot.providers.registry import PROVIDERS
         model_lower = (model or self.agents.defaults.model).lower()
+        openai_cfg = self.providers.openai
+
+        # OpenAI model routing can use local Codex CLI authentication
+        # without requiring an API key in config.
+        if model_lower.startswith("openai/") and openai_cfg.use_codex_cli:
+            return openai_cfg, "openai"
 
         # Match by keyword (order follows PROVIDERS registry)
         for spec in PROVIDERS:

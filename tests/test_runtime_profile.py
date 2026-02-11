@@ -55,3 +55,13 @@ def test_enterprise_minimal_rejects_unsupported_allowed_channel_config() -> None
 
     with pytest.raises(ProfileValidationError, match="allows only optional enterprise channels"):
         validate_runtime_profile(config, mode="agent")
+
+
+def test_enterprise_minimal_allows_codex_cli_route_without_openai_api_key() -> None:
+    config = Config()
+    config.runtime_profile = "enterprise_minimal"
+    config.providers.openai.api_key = ""
+    config.providers.openai.use_codex_cli = True
+    config.agents.defaults.model = "openai/gpt-5.3-codex"
+
+    validate_runtime_profile(config, mode="agent")
