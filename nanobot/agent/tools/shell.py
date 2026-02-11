@@ -3,6 +3,7 @@
 import asyncio
 import os
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -124,18 +125,71 @@ class ExecTool(Tool):
         if self.restrict_to_workspace:
             if "..\\" in cmd or "../" in cmd:
                 return "Error: Command blocked by safety guard (path traversal detected)"
+            if re.search(r"(^|[^\\])\$\(", cmd) or re.search(r"(^|[^\\])`", cmd):
+                return "Error: Command blocked by safety guard (command substitution not allowed)"
 
             cwd_path = Path(cwd).resolve()
 
             win_paths = re.findall(r"[A-Za-z]:\\[^\\\"']+", cmd)
-            posix_paths = re.findall(r"/[^\s\"']+", cmd)
+            # Match POSIX absolute paths at command start or after common shell
+            # separators while avoiding false positives from relative paths like
+            # ".venv/bin/python".
+            posix_paths = re.findall(
+                r"(?:^|[\s|><;&])(/[^\s\"'<>|;&]+)",
+                cmd,
+            )
+            # Normalize common shell path expansions so workspace checks cannot
+            # be bypassed with forms like "~/.ssh/..." or "$HOME/.ssh/...".
+            shell_expansion_paths = re.findall(
+                r"(?:^|[\s|><;&])((?:~|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[^}]+\})/[^\s\"'<>|;&]+)",
+                cmd,
+            )
+            expanded_paths: list[str] = []
+            for raw in shell_expansion_paths:
+                expanded = os.path.expanduser(os.path.expandvars(raw.strip()))
+                if "$" in expanded or "~" in expanded:
+                    return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
+                expanded_paths.append(expanded)
 
-            for raw in win_paths + posix_paths:
+            token_paths: list[str] = []
+            try:
+                tokens = shlex.split(cmd, posix=True)
+            except ValueError:
+                return "Error: Command blocked by safety guard (unable to parse shell command)"
+            for token in tokens:
+                for part in re.split(r"[|><;&]", token):
+                    candidate = part.strip()
+                    if not candidate:
+                        continue
+                    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", candidate):
+                        return "Error: Command blocked by safety guard (env assignments not allowed in restricted mode)"
+                    if candidate.startswith("/"):
+                        token_paths.append(candidate)
+                    elif candidate.startswith("~"):
+                        token_paths.append(os.path.expanduser(candidate))
+                    elif re.match(r"^\$[A-Za-z_][A-Za-z0-9_]*/", candidate) or re.match(
+                        r"^\$\{[^}]+\}/",
+                        candidate,
+                    ):
+                        expanded = os.path.expandvars(candidate)
+                        if "$" in expanded:
+                            return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
+                        token_paths.append(expanded)
+                    elif re.match(r"^\$[A-Za-z_][A-Za-z0-9_]*$", candidate) or re.match(
+                        r"^\$\{[^}]+\}$",
+                        candidate,
+                    ):
+                        expanded = os.path.expandvars(candidate)
+                        if "$" in expanded:
+                            return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
+                        token_paths.append(expanded)
+
+            for raw in win_paths + posix_paths + expanded_paths + token_paths:
                 try:
-                    p = Path(raw).resolve()
+                    p = Path(raw.strip()).resolve()
                 except Exception:
                     continue
-                if cwd_path not in p.parents and p != cwd_path:
+                if p.is_absolute() and cwd_path not in p.parents and p != cwd_path:
                     return "Error: Command blocked by safety guard (path outside working dir)"
 
         return None
