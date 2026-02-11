@@ -161,6 +161,8 @@ class ExecTool(Tool):
                     candidate = part.strip()
                     if not candidate:
                         continue
+                    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=.*$", candidate):
+                        return "Error: Command blocked by safety guard (env assignments not allowed in restricted mode)"
                     if candidate.startswith("/"):
                         token_paths.append(candidate)
                     elif candidate.startswith("~"):

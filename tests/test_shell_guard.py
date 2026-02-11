@@ -169,3 +169,21 @@ def test_workspace_guard_allows_bare_var_token_inside_workspace(tmp_path, monkey
     err = tool._guard_command("ls $NB_WORK", str(tmp_path))
 
     assert err is None
+
+
+def test_workspace_guard_blocks_assignment_driven_pwd_override(tmp_path) -> None:
+    tool = ExecTool(restrict_to_workspace=True)
+
+    err = tool._guard_command("PWD=/etc; cd $PWD && cat passwd", str(tmp_path))
+
+    assert err is not None
+    assert "env assignments not allowed" in err
+
+
+def test_workspace_guard_blocks_env_assignment_prefix(tmp_path) -> None:
+    tool = ExecTool(restrict_to_workspace=True)
+
+    err = tool._guard_command("HOME=/etc ls $HOME", str(tmp_path))
+
+    assert err is not None
+    assert "env assignments not allowed" in err
