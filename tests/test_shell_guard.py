@@ -130,6 +130,26 @@ def test_restricted_mode_allows_simple_allowlisted_command(tmp_path) -> None:
     assert err is None
 
 
+def test_restricted_mode_allows_find_without_exec(tmp_path) -> None:
+    tool = ExecTool(restrict_to_workspace=True)
+
+    err = tool._guard_command("find . -maxdepth 1", str(tmp_path))
+
+    assert err is None
+
+
+def test_restricted_mode_blocks_find_exec_predicate(tmp_path) -> None:
+    tool = ExecTool(restrict_to_workspace=True)
+
+    err = tool._guard_command(
+        'find . -maxdepth 0 -exec sh -c "cat /etc/passwd" sh {} +',
+        str(tmp_path),
+    )
+
+    assert err is not None
+    assert "find argument '-exec' is not allowed" in err
+
+
 def test_restricted_mode_allows_allowlisted_subcommand(tmp_path) -> None:
     tool = ExecTool(restrict_to_workspace=True)
 

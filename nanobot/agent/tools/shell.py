@@ -47,6 +47,10 @@ FORBIDDEN_SHELL_OPERATOR_TOKENS = {
     "}",
 }
 
+RESTRICTED_COMMAND_BLOCKED_ARG_TOKENS: dict[str, set[str]] = {
+    "find": {"-exec", "-execdir", "-ok", "-okdir", "-delete"},
+}
+
 
 class ExecTool(Tool):
     """Tool to execute shell commands."""
@@ -246,6 +250,9 @@ class ExecTool(Tool):
             )
         if not self._is_command_allowlisted(tokens):
             return [], "Error: Command blocked in restricted mode (command not allowlisted)"
+        arg_error = self._validate_restricted_command_args(command_name, tokens[1:])
+        if arg_error:
+            return [], arg_error
 
         for token in tokens[1:]:
             for candidate in self._extract_path_candidates(token):
@@ -317,6 +324,18 @@ class ExecTool(Tool):
             if token.startswith("-"):
                 continue
             return token
+        return None
+
+    def _validate_restricted_command_args(self, command: str, args: list[str]) -> str | None:
+        blocked_args = RESTRICTED_COMMAND_BLOCKED_ARG_TOKENS.get(command.lower())
+        if not blocked_args:
+            return None
+        for token in args:
+            if token.lower() in blocked_args:
+                return (
+                    "Error: Command blocked in restricted mode "
+                    f"({command} argument '{token}' is not allowed)"
+                )
         return None
 
     def _extract_path_candidates(self, token: str) -> list[str]:
