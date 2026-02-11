@@ -3,6 +3,7 @@
 import asyncio
 import os
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -124,6 +125,8 @@ class ExecTool(Tool):
         if self.restrict_to_workspace:
             if "..\\" in cmd or "../" in cmd:
                 return "Error: Command blocked by safety guard (path traversal detected)"
+            if re.search(r"(^|[^\\])\$\(", cmd) or re.search(r"(^|[^\\])`", cmd):
+                return "Error: Command blocked by safety guard (command substitution not allowed)"
 
             cwd_path = Path(cwd).resolve()
 
@@ -148,7 +151,30 @@ class ExecTool(Tool):
                     return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
                 expanded_paths.append(expanded)
 
-            for raw in win_paths + posix_paths + expanded_paths:
+            token_paths: list[str] = []
+            try:
+                tokens = shlex.split(cmd, posix=True)
+            except ValueError:
+                return "Error: Command blocked by safety guard (unable to parse shell command)"
+            for token in tokens:
+                for part in re.split(r"[|><;&]", token):
+                    candidate = part.strip()
+                    if not candidate:
+                        continue
+                    if candidate.startswith("/"):
+                        token_paths.append(candidate)
+                    elif candidate.startswith("~"):
+                        token_paths.append(os.path.expanduser(candidate))
+                    elif re.match(r"^\$[A-Za-z_][A-Za-z0-9_]*/", candidate) or re.match(
+                        r"^\$\{[A-Za-z_][A-Za-z0-9_]*\}/",
+                        candidate,
+                    ):
+                        expanded = os.path.expandvars(candidate)
+                        if "$" in expanded:
+                            return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
+                        token_paths.append(expanded)
+
+            for raw in win_paths + posix_paths + expanded_paths + token_paths:
                 try:
                     p = Path(raw.strip()).resolve()
                 except Exception:
