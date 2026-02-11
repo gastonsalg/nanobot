@@ -54,8 +54,19 @@ class DiscordConfig(BaseModel):
 
 
 class TeamsConfig(BaseModel):
-    """Microsoft Teams channel configuration (feasibility stub)."""
+    """Microsoft Teams channel configuration."""
     enabled: bool = False
+    mode: str = "stub"  # stub | botframework_webhook
+    webhook_path: str = "/api/teams/messages"
+    require_auth_header: bool = True  # Best-effort inbound guard for webhook mode
+    allowed_service_url_hosts: list[str] = Field(
+        default_factory=lambda: [
+            "smba.trafficmanager.net",
+            "smba.infra.gcc.teams.microsoft.com",
+            "smba.infra.gov.teams.microsoft.us",
+            "smba.infra.dod.teams.microsoft.us",
+        ]
+    )
     app_id: str = ""
     app_password: str = ""
     tenant_id: str = ""

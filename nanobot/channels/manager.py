@@ -79,9 +79,16 @@ class ChannelManager:
             try:
                 from nanobot.channels.teams import TeamsChannel
                 self.channels["teams"] = TeamsChannel(
-                    self.config.channels.teams, self.bus
+                    self.config.channels.teams,
+                    self.bus,
+                    gateway_host=self.config.gateway.host,
+                    gateway_port=self.config.gateway.port,
                 )
-                logger.info("Teams channel enabled (feasibility stub)")
+                logger.info(
+                    "Teams channel enabled "
+                    f"(mode={self.config.channels.teams.mode}, "
+                    f"webhook={self.config.channels.teams.webhook_path})"
+                )
             except ImportError as e:
                 logger.warning(f"Teams channel not available: {e}")
         

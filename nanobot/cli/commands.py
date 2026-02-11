@@ -341,6 +341,7 @@ def gateway(
     console.print(f"{__logo__} Starting goodbot gateway on port {port}...")
     
     config = load_config()
+    config.gateway.port = port
     _enforce_runtime_profile(config, mode="gateway")
     bus = MessageBus()
     provider = _make_provider(config)
