@@ -33,8 +33,11 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 - [x] (2026-02-09 09:16Z) Complete Milestone 2 security baseline gate (close critical/high risks before channel expansion).
 - [x] (2026-02-09) Complete Milestone 3 minimal profile spike (CLI-first, OpenAI/Codex-only, Teams optional).
 - [x] (2026-02-09) Complete Milestone 4 Microsoft Teams channel feasibility spike.
+- [x] (2026-02-11 08:00Z) Researched a local `tinyclaw` clone as an alternative baseline and recorded implementation ideas suitable for this fork.
+- [x] (2026-02-11 08:00Z) Fetched `upstream/main` and confirmed 28 new commits are pending for downstream sync review before further implementation.
 - [ ] Complete Milestone 5 extension interface spike (Microsoft/Jira/Confluence/Miro adapter contracts with stubs).
 - [ ] Complete Milestone 6 upstream sync rehearsal and conflict-cost measurement.
+- [ ] Define and execute a post-sync architectural hardening plan for restricted command execution (replace shell-string guarding with structured execution controls).
 - [ ] Produce final feasibility recommendation and implementation roadmap.
 
 ## Surprises & Discoveries
@@ -68,6 +71,15 @@ After this work, we will know whether this fork can be narrowed to an enterprise
 
 - Observation: The repository currently ignores `tests/` in `.gitignore`, so new regression tests require explicit force-add when committing.
   Evidence: `git add tests/test_teams_channel.py` was rejected until using `git add -f`.
+
+- Observation: TinyClaw demonstrates that Codex CLI authentication can be used as an OpenAI execution path without storing OpenAI API keys in app config, but its default conversation continuity model is globally shared (`resume --last`) and not isolated per channel/user.
+  Evidence: `<tinyclaw-repo>/src/queue-processor.ts` uses `codex exec resume --last --json --full-auto` for the OpenAI provider path.
+
+- Observation: TinyClaw's claim of race-condition prevention is directionally valid (single queue processor and one-at-a-time awaits) but the timer-driven polling loop can overlap when processing exceeds the poll interval.
+  Evidence: `<tinyclaw-repo>/src/queue-processor.ts` schedules `setInterval(processQueue, 1000)` and processes files with awaited sequential iteration.
+
+- Observation: Regex/token-based shell guarding is prone to recurring bypass discoveries as more shell grammar features are exercised (expansions, quoting, parameter operators, assignments).
+  Evidence: successive PR #9 reviews uncovered additional `restrict_to_workspace` bypass classes despite incremental patches.
 
 ## Decision Log
 
@@ -107,6 +119,22 @@ After this work, we will know whether this fork can be narrowed to an enterprise
   Rationale: The feasibility objective is to prove routing and payload shape without external credentials or network dependencies; this keeps tests stable and merge risk low while preserving an additive path to real transport later.
   Date/Author: 2026-02-09 / Codex
 
+- Decision: Do not restart the enterprise adaptation from TinyClaw; continue on this fork and selectively borrow proven ideas.
+  Rationale: This fork already has stronger security and policy foundations (default-deny channel authorization, tool policy gates, profile validation, and broader test coverage) that would be expensive and risky to rebuild from TinyClaw's narrower baseline.
+  Date/Author: 2026-02-11 / Codex
+
+- Decision: Treat TinyClaw's Codex CLI provider path as a candidate additive adapter in this fork, not as a replacement for existing provider architecture.
+  Rationale: A CLI-authenticated option may fit seat-licensed enterprise environments without API credits, but it must preserve per-session isolation and current security controls.
+  Date/Author: 2026-02-11 / Codex
+
+- Decision: Execute an upstream sync checkpoint before starting Milestone 5 implementation work.
+  Rationale: Upstream now has 28 new commits touching core runtime, security, docs, and plan artifacts; syncing first reduces duplicate work and rebase churn during connector-interface implementation.
+  Date/Author: 2026-02-11 / Codex
+
+- Decision: Treat current `ExecTool` shell guard patches as interim controls and schedule an architectural replacement for restricted execution mode.
+  Rationale: Shell-string parsing is brittle and leads to recurring bypass classes; a structured execution model (no `sh -c`, strict allowlist, and runtime sandboxing) provides a more reliable boundary.
+  Date/Author: 2026-02-11 / Codex
+
 ## Outcomes & Retrospective
 
 Milestone 1 outcome (2026-02-09): baseline environment is reproducible in `.venv`, tests pass after editable install, and the enterprise target contract is documented in `plan/enterprise-inventory.md` with explicit keep/disable/remove candidates.
@@ -123,6 +151,8 @@ Remaining outcomes to summarize at later milestones:
 2. Which components remain close to upstream and which require a maintained divergence.
 3. Estimated ongoing cost of upstream sync and risk controls required.
 
+Current checkpoint outcome (2026-02-11): TinyClaw assessment completed. The fork will borrow two implementation ideas for future milestones: (1) optional provider adapter using authenticated CLI execution in environments without API credits, and (2) explicit serialized processing guarantees that are test-proven rather than timer-assumed. Upstream change volume is now significant (28 commits), so sync is prioritized before new feature implementation.
+
 ## Context and Orientation
 
 This repository is a Python assistant framework (`nanobot/`) with optional multi-channel integrations and a Node.js WhatsApp bridge (`bridge/`). The command-line entrypoint and runtime wiring live in `nanobot/cli/commands.py`. The agent orchestration loop, tool execution, and context construction are in `nanobot/agent/`. LLM provider selection and routing are in `nanobot/config/schema.py` and `nanobot/providers/`. Channel adapters are in `nanobot/channels/`. Scheduled behavior is handled by `nanobot/cron/` and `nanobot/heartbeat/`.
@@ -130,6 +160,12 @@ This repository is a Python assistant framework (`nanobot/`) with optional multi
 For enterprise adaptation, the key question is not only "can we remove features," but "can we remove or disable them in a way that still allows regular upstream pulls." In this plan, "upstream compatibility" means this fork can repeatedly merge changes from upstream (`HKUDS/nanobot`) into this repository with predictable, bounded conflicts; it does not imply pushing enterprise-specific fork changes upstream. "Profile" means a named runtime mode that enables a constrained subset of functionality (for example `enterprise_minimal`) without deleting upstream code prematurely.
 
 Fork divergence tracking policy: all intentional fork-vs-upstream behavior differences must be recorded in `FORK-DIFFERENCES.md` at introduction time, and the file must be reviewed/updated in every upstream sync PR.
+
+## TinyClaw Borrow Candidates
+
+TinyClaw was reviewed as a parallel simplification experiment (local tinyclaw clone). We will borrow ideas, not architecture. The first borrow candidate is an optional provider adapter that invokes an authenticated CLI runtime (Codex) for model execution, so enterprise users with seat access but no API credits can still use the assistant under controlled conditions. The second candidate is operational hardening around serialized message processing: keep deterministic single-message execution guarantees in core runtime and add explicit tests/guards so behavior does not depend on timer cadence.
+
+We will not import TinyClaw's global conversation reuse model (`resume --last`) directly because it can blur isolation between users/channels. Any CLI-backed provider in this fork must preserve existing session keying semantics and enterprise authorization rules.
 
 ## Plan of Work
 
@@ -174,6 +210,8 @@ Acceptance: from a simulated Teams inbound payload, the bus receives an `Inbound
 
 Define adapter interfaces and stub implementations for future integrations: Microsoft 365/SharePoint, Jira, Confluence, and Miro. Stubs should be testable without network calls and without credentials. The purpose is to prove architecture shape and call flows, not to complete real integrations.
 
+Execution sequencing note: before writing Milestone 5 code, perform the upstream sync checkpoint from Milestone 6 steps (fetch, merge rehearsal, conflict map) against latest `upstream/main`, then continue with Milestone 5 on top of the synced baseline.
+
 Expected outcome: a new module namespace for enterprise connectors and tests that prove the agent can invoke connector abstractions safely.
 
 Acceptance: A simple local test can call a stub connector through a registered tool and return deterministic output.
@@ -183,6 +221,19 @@ Acceptance: A simple local test can call a stub connector through a registered t
 Rehearse merge mechanics by adding upstream remote, creating a sync branch, and performing at least one merge/rebase simulation against current upstream state. Measure conflict count and conflict locations. Use this evidence to finalize the long-term fork strategy.
 
 Acceptance: A short report captures merge conflict hotspots and a recommended branch strategy with update cadence.
+
+### Milestone 7: Restricted Execution Architecture Hardening
+
+Replace best-effort shell-string guarding in restricted mode with a more robust execution boundary. Target approach: avoid `sh -c`, execute structured argv commands only, maintain an explicit allowlist for permitted commands/subcommands, and apply runtime sandbox constraints (for example isolated container/workdir and reduced privileges) where feasible.
+
+This milestone is intentionally sequenced after upstream sync to minimize churn during current synchronization work while preventing ongoing "patch-per-bypass" drift.
+
+Acceptance:
+
+1. Restricted mode rejects shell grammar features by design (command substitution, inline assignments, shell chaining semantics).
+2. Allowed commands run through a structured execution path that does not depend on shell expansion parsing.
+3. Tests cover known bypass classes currently tracked in `tests/test_shell_guard.py` and confirm equivalent protection in the new execution path.
+4. Restricted mode enforces an explicit allowed working-directory policy (execution `cwd` must remain within configured workspace boundaries).
 
 ## Concrete Steps
 
@@ -392,3 +443,5 @@ Plan revision note (2026-02-09): Adjusted Teams scope to be additive with CLI so
 Plan revision note (2026-02-09): Resumed execution; added baseline setup/test evidence, completed Milestone 1 inventory artifact, and updated living sections to reflect observed results and decisions.
 Plan revision note (2026-02-09): Added security risk register and re-sequenced milestones so security baseline remediation is an explicit gate before profile/channel expansion.
 Plan revision note (2026-02-09): Completed Milestone 2 security baseline implementation with tests, added policy matrix, and updated risk register to closed status for initial critical/high findings.
+Plan revision note (2026-02-11): Added TinyClaw research findings and borrow candidates, recorded decision to keep this fork as baseline, and prioritized an upstream sync checkpoint (28 pending commits) before new Milestone 5 implementation work.
+Plan revision note (2026-02-11): Added Milestone 7 and decision-log guidance for architectural restricted-execution hardening; current shell-guard regex/token patches are tracked as interim controls only.
