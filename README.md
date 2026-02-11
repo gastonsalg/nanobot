@@ -1,10 +1,10 @@
-# nanobot Enterprise Fork
+# goodbot Enterprise Fork
 
 This repository is an enterprise-focused downstream fork of [HKUDS/nanobot](https://github.com/HKUDS/nanobot).
 
 ## Fork Intent
 
-This fork exists to adapt nanobot for internal enterprise use with stronger default security controls, a narrower runtime profile, and connector/channel decisions aligned with employer requirements.
+This fork exists to adapt upstream nanobot for internal enterprise use with stronger default security controls, a narrower runtime profile, and connector/channel decisions aligned with employer requirements.
 
 The maintenance model is:
 
@@ -54,18 +54,18 @@ pytest -q
 Initialize local config/workspace:
 
 ```bash
-nanobot onboard
+goodbot onboard
 ```
 
 Run direct CLI mode:
 
 ```bash
-nanobot agent -m "hello"
+goodbot agent -m "hello"
 ```
 
 ## Configuration Notes
 
-Config lives at `~/.nanobot/config.json`.
+Config lives at `~/.nanobot/config.json` (path intentionally kept for compatibility during fork evolution).
 
 Important defaults in this fork:
 

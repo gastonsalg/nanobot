@@ -7,6 +7,7 @@ This file defines practical working rules for this fork. Keep it concise and exe
 - This repository is an enterprise-focused downstream fork of `HKUDS/nanobot`.
 - Merge direction is from upstream into this fork.
 - Enterprise-specific fork behavior is maintained here; upstream contribution is optional and case-by-case.
+- User-facing CLI command is `goodbot`; internal package/layout remains `nanobot`.
 
 ## Required Git Workflow
 

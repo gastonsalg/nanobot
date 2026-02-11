@@ -1,4 +1,4 @@
-"""CLI commands for nanobot."""
+"""CLI commands for goodbot."""
 
 import asyncio
 import os
@@ -21,8 +21,8 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from nanobot import __version__, __logo__
 
 app = typer.Typer(
-    name="nanobot",
-    help=f"{__logo__} nanobot - Personal AI Assistant",
+    name="goodbot",
+    help=f"{__logo__} goodbot - Personal AI Assistant",
     no_args_is_help=True,
 )
 
@@ -101,7 +101,7 @@ def _print_agent_response(response: str, render_markdown: bool) -> None:
     content = response or ""
     body = Markdown(content) if render_markdown else Text(content)
     console.print()
-    console.print(f"[cyan]{__logo__} nanobot[/cyan]")
+    console.print(f"[cyan]{__logo__} goodbot[/cyan]")
     console.print(body)
     console.print()
 
@@ -133,7 +133,7 @@ async def _read_interactive_input_async() -> str:
 
 def version_callback(value: bool):
     if value:
-        console.print(f"{__logo__} nanobot v{__version__}")
+        console.print(f"{__logo__} goodbot v{__version__}")
         raise typer.Exit()
 
 
@@ -143,7 +143,7 @@ def main(
         None, "--version", "-v", callback=version_callback, is_eager=True
     ),
 ):
-    """nanobot - Personal AI Assistant."""
+    """goodbot - Personal AI Assistant."""
     pass
 
 
@@ -154,7 +154,7 @@ def main(
 
 @app.command()
 def onboard():
-    """Initialize nanobot configuration and workspace."""
+    """Initialize goodbot configuration and workspace."""
     from nanobot.config.loader import get_config_path, save_config
     from nanobot.config.schema import Config
     from nanobot.utils.helpers import get_workspace_path
@@ -178,12 +178,12 @@ def onboard():
     # Create default bootstrap files
     _create_workspace_templates(workspace)
     
-    console.print(f"\n{__logo__} nanobot is ready!")
+    console.print(f"\n{__logo__} goodbot is ready!")
     console.print("\nNext steps:")
     console.print("  1. Configure provider credentials in [cyan]~/.nanobot/config.json[/cyan]")
     console.print("     Enterprise profile: set [cyan]providers.openai.apiKey[/cyan] and [cyan]agents.defaults.model[/cyan] to [cyan]openai/...[/cyan]")
     console.print("  2. Optional: enable [cyan]runtimeProfile[/cyan] = [cyan]enterprise_minimal[/cyan]")
-    console.print("  3. Chat: [cyan]nanobot agent -m \"Hello!\"[/cyan]")
+    console.print("  3. Chat: [cyan]goodbot agent -m \"Hello!\"[/cyan]")
     console.print("\n[dim]See README.md for fork-specific setup and policy defaults.[/dim]")
 
 
@@ -205,7 +205,7 @@ You are a helpful AI assistant. Be concise, accurate, and friendly.
 """,
         "SOUL.md": """# Soul
 
-I am nanobot, a lightweight AI assistant.
+I am goodbot, a lightweight AI assistant.
 
 ## Personality
 
@@ -304,7 +304,7 @@ def gateway(
     port: int = typer.Option(18790, "--port", "-p", help="Gateway port"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
-    """Start the nanobot gateway."""
+    """Start the goodbot gateway."""
     from nanobot.config.loader import load_config, get_data_dir
     from nanobot.bus.queue import MessageBus
     from nanobot.agent.loop import AgentLoop
@@ -318,7 +318,7 @@ def gateway(
         import logging
         logging.basicConfig(level=logging.DEBUG)
     
-    console.print(f"{__logo__} Starting nanobot gateway on port {port}...")
+    console.print(f"{__logo__} Starting goodbot gateway on port {port}...")
     
     config = load_config()
     _enforce_runtime_profile(config, mode="gateway")
@@ -421,7 +421,7 @@ def agent(
     message: str = typer.Option(None, "--message", "-m", help="Message to send to the agent"),
     session_id: str = typer.Option("cli:default", "--session", "-s", help="Session ID"),
     markdown: bool = typer.Option(True, "--markdown/--no-markdown", help="Render assistant output as Markdown"),
-    logs: bool = typer.Option(False, "--logs/--no-logs", help="Show nanobot runtime logs during chat"),
+    logs: bool = typer.Option(False, "--logs/--no-logs", help="Show goodbot runtime logs during chat"),
 ):
     """Interact with the agent directly."""
     from nanobot.config.loader import load_config
@@ -457,7 +457,7 @@ def agent(
             from contextlib import nullcontext
             return nullcontext()
         # Animated spinner is safe to use with prompt_toolkit input handling
-        return console.status("[dim]nanobot is thinking...[/dim]", spinner="dots")
+        return console.status("[dim]goodbot is thinking...[/dim]", spinner="dots")
 
     if message:
         # Single message mode
@@ -620,7 +620,7 @@ def _get_bridge_dir() -> Path:
     
     if not source:
         console.print("[red]Bridge source not found.[/red]")
-        console.print("Try reinstalling: pip install --force-reinstall nanobot")
+        console.print("Try reinstalling: pip install --force-reinstall nanobot-ai")
         raise typer.Exit(1)
     
     console.print(f"{__logo__} Setting up bridge...")
@@ -841,14 +841,14 @@ def cron_run(
 
 @app.command()
 def status():
-    """Show nanobot status."""
+    """Show goodbot status."""
     from nanobot.config.loader import load_config, get_config_path
 
     config_path = get_config_path()
     config = load_config()
     workspace = config.workspace_path
 
-    console.print(f"{__logo__} nanobot Status\n")
+    console.print(f"{__logo__} goodbot Status\n")
 
     console.print(f"Config: {config_path} {'[green]✓[/green]' if config_path.exists() else '[red]✗[/red]'}")
     console.print(f"Workspace: {workspace} {'[green]✓[/green]' if workspace.exists() else '[red]✗[/red]'}")

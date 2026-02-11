@@ -16,11 +16,11 @@ echo "=== Building Docker image ==="
 docker build -t "$IMAGE_NAME" .
 
 echo ""
-echo "=== Running 'nanobot onboard' ==="
+echo "=== Running 'goodbot onboard' ==="
 docker run --name nanobot-test-run "$IMAGE_NAME" onboard
 
 echo ""
-echo "=== Running 'nanobot status' ==="
+echo "=== Running 'goodbot status' ==="
 STATUS_OUTPUT=$(docker commit nanobot-test-run nanobot-test-onboarded > /dev/null && \
     docker run --rm nanobot-test-onboarded status 2>&1) || true
 
@@ -39,7 +39,7 @@ check() {
     fi
 }
 
-check "nanobot Status"
+check "goodbot Status"
 check "Config:"
 check "Workspace:"
 check "Model:"
