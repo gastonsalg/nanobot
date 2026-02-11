@@ -135,8 +135,20 @@ class ExecTool(Tool):
                 r"(?:^|[\s|><;&])(/[^\s\"'<>|;&]+)",
                 cmd,
             )
+            # Normalize common shell path expansions so workspace checks cannot
+            # be bypassed with forms like "~/.ssh/..." or "$HOME/.ssh/...".
+            shell_expansion_paths = re.findall(
+                r"(?:^|[\s|><;&])((?:~|\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\})/[^\s\"'<>|;&]+)",
+                cmd,
+            )
+            expanded_paths: list[str] = []
+            for raw in shell_expansion_paths:
+                expanded = os.path.expanduser(os.path.expandvars(raw.strip()))
+                if "$" in expanded or "~" in expanded:
+                    return "Error: Command blocked by safety guard (unresolved path expansion in restricted mode)"
+                expanded_paths.append(expanded)
 
-            for raw in win_paths + posix_paths:
+            for raw in win_paths + posix_paths + expanded_paths:
                 try:
                     p = Path(raw.strip()).resolve()
                 except Exception:
