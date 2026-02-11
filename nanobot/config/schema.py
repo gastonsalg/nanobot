@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class WhatsAppConfig(BaseModel):
@@ -253,6 +253,11 @@ class ToolsConfig(BaseModel):
 
 class Config(BaseSettings):
     """Root configuration for nanobot."""
+    model_config = SettingsConfigDict(
+        env_prefix="NANOBOT_",
+        env_nested_delimiter="__",
+    )
+
     runtime_profile: str = "default"
     enterprise_allowed_channels: list[str] = Field(default_factory=list)
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
@@ -314,6 +319,3 @@ class Config(BaseSettings):
                 return spec.default_api_base
         return None
     
-    class Config:
-        env_prefix = "NANOBOT_"
-        env_nested_delimiter = "__"
