@@ -43,6 +43,10 @@ This file defines practical working rules for this fork. Keep it concise and exe
 - Any intentional fork-vs-upstream behavior difference must be recorded in `FORK-DIFFERENCES.md` in the same PR.
 - During each upstream sync PR, review and update `FORK-DIFFERENCES.md` as a required checklist item.
 
+## Documentation Maintenance
+
+- When architecture, runtime flow, channel wiring, or provider routing changes, update `docs/OVERVIEW.md` in the same PR.
+
 ## Reference Documents
 
 - Product/repo overview: `README.md`
